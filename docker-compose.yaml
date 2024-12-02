@@ -1,0 +1,39 @@
+services:
+  ray-head:
+    build:
+      context: .
+    container_name: ray-head
+    ports:
+      - "6379:6379"        # Redis port
+      - "8265:8265"        # Dashboard port
+      - "10001:10001"      # Node manager
+      - "12345:12345"      # GCS server
+    command: >
+      sh -c "ray start --head --port=6379 --disable-usage-stats --include-dashboard true --dashboard-host=0.0.0.0 && tail -f /dev/null"
+    networks:
+      ray-network:
+        aliases:
+          - ray-head
+    volumes:
+      - ./ray-head-tmp:/tmp
+    shm_size: "3gb"
+
+  ray-worker:
+    build:
+      context: .
+    container_name: ray-worker
+    depends_on:
+      - ray-head
+    command: >
+      sh -c "ray start --address=ray-head:6379 && tail -f /dev/null"
+    networks:
+      ray-network:
+        aliases:
+          - ray-worker
+    volumes:
+      - ./ray-worker-tmp:/tmp
+    shm_size: "3gb"
+
+networks:
+  ray-network:
+    driver: bridge
